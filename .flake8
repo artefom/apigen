@@ -1,0 +1,6 @@
+[flake8]
+select = C,E,F,W,B,B9
+ignore = E203, E501, W503, F821, F723
+max-line-length = 120
+exclude = tests/* build/* dist/* .venv/* __init__.py
+max-complexity = 15
