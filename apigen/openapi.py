@@ -31,7 +31,14 @@ class StringSchema(BaseModel):
     enum: t.Optional[t.List[str]]
 
 
-SCALAR = (NumberSchema, IntegerSchema, StringSchema)
+class BooleanSchema(BaseModel):
+    type: t.Literal["boolean"] = "boolean"
+    title: t.Optional[str]
+    description: t.Optional[str]
+    example: t.Optional[bool]
+
+
+SCALAR = (NumberSchema, IntegerSchema, StringSchema, BooleanSchema)
 
 
 class ObjectSchema(BaseModel):
@@ -50,11 +57,25 @@ class ArraySchema(BaseModel):
 
 
 Schema = t.Annotated[
-    t.Union[NumberSchema, IntegerSchema, StringSchema, ObjectSchema, ArraySchema],
+    t.Union[
+        BooleanSchema,
+        NumberSchema,
+        IntegerSchema,
+        StringSchema,
+        ObjectSchema,
+        ArraySchema,
+    ],
     Field(discriminator="type"),
 ]
 
-SCHEMA = (NumberSchema, IntegerSchema, StringSchema, ObjectSchema, ArraySchema)
+SCHEMA = (
+    BooleanSchema,
+    NumberSchema,
+    IntegerSchema,
+    StringSchema,
+    ObjectSchema,
+    ArraySchema,
+)
 
 SchemaOrReference = t.Union[Schema, SchemaReference]
 

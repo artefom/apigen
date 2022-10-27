@@ -53,7 +53,12 @@ def error_context(
             ) from exc
 
 
-TYPE_MAPPING = {"integer": "i64", "string": "String", "number": "f64"}
+TYPE_MAPPING = {
+    "integer": "i64",
+    "string": "String",
+    "number": "f64",
+    "boolean": "bool",
+}
 
 
 def get_reference_name(reference: openapi.SchemaReference) -> str:
@@ -71,6 +76,23 @@ def get_schema_prop(title: str, schema: openapi.SchemaOrReference):
 
     if isinstance(schema, openapi.SchemaReference):
         return {"doc": None, "title": title, "type": get_reference_name(schema)}
+
+    if (
+        isinstance(schema, openapi.ObjectSchema)
+        and schema.additionalProperties is not None
+    ):
+        return {
+            "doc": schema.description,
+            "title": title,
+            "type": f"HashMap<String,{render_inline(schema.additionalProperties)}>",
+        }
+
+    if isinstance(schema, openapi.ArraySchema):
+        return {
+            "doc": schema.description,
+            "title": title,
+            "type": f"Vec<{render_inline(schema.items)}>",
+        }
 
     raise NotImplementedError(f"Cannot serialize struct property {schema}")
 
