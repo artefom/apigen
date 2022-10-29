@@ -6,7 +6,6 @@
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct {{title}} {
   {% for prop in props %}
-
     {% if prop.doc %}
     {% for line in prop.doc.splitlines() %}
     /// {{line}}

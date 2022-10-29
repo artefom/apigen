@@ -18,9 +18,7 @@ impl Display for {{ error_type }} {
     }
 }
 
-impl std::error::Error for {{error_type}} {}
-
-impl ResponseError for {{error_type}} {
+impl StatusCoded for {{error_type}} {
     fn status_code(&self) -> StatusCode {
         match self {
             {% for variant in variants %}

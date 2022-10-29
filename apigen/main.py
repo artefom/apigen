@@ -1,16 +1,14 @@
-import textwrap
 import typing as t
 from contextlib import contextmanager
+from enum import Enum, auto
 
 import typer
 import yaml
+from importlib_resources import files
+from jinja2 import Environment, FunctionLoader
 
 import apigen.openapi as openapi
-
-from importlib_resources import files
 import apigen.templates
-from jinja2 import Environment, FunctionLoader
-from enum import Enum, auto
 
 JinjaEnv = Environment(
     loader=FunctionLoader(
@@ -21,8 +19,10 @@ JinjaEnv = Environment(
 )
 
 
-def to_camel_case(s: str) -> str:
-    return "".join(word.capitalize() for word in s.replace(" ", "_").split("_"))
+def to_camel_case(some_string: str) -> str:
+    return "".join(
+        word.capitalize() for word in some_string.replace(" ", "_").split("_")
+    )
 
 
 JinjaEnv.filters["to_camel_case"] = to_camel_case
@@ -43,14 +43,13 @@ def error_context(
 ) -> t.Generator[None, None, None]:
     try:
         yield
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=[W0703,]
         if isinstance(exc, ErrorReport):
             exc.args = (f"{msg}\n\nCaused by:\n{exc}", *exc.args[1:])
             raise
-        else:
-            raise ErrorReport(
-                f"{msg}\n\nCaused by:\n{exc.__class__.__name__}: {exc}"
-            ) from exc
+        raise ErrorReport(
+            f"{msg}\n\nCaused by:\n{exc.__class__.__name__}: {exc}"
+        ) from exc
 
 
 TYPE_MAPPING = {
@@ -65,8 +64,8 @@ def get_reference_name(reference: openapi.SchemaReference) -> str:
     return reference.ref.split("/")[-1]
 
 
-def get_schema_prop(title: str, schema: openapi.SchemaOrReference):
-
+def _get_schema_prop(title: str, schema: openapi.SchemaOrReference):
+    assert isinstance(title, str)
     if isinstance(schema, openapi.SCALAR):
         return {
             "doc": schema.description,
@@ -97,13 +96,22 @@ def get_schema_prop(title: str, schema: openapi.SchemaOrReference):
     raise NotImplementedError(f"Cannot serialize struct property {schema}")
 
 
+def get_schema_prop(title: str, schema: openapi.SchemaOrReference, prop_required: bool):
+    rendered = _get_schema_prop(title, schema)
+    if not prop_required:
+        rendered["type"] = f"Option<{rendered['type']}>"
+    return rendered
+
+
 def serialzie_props(
-    properties: t.Dict[str, openapi.SchemaOrReference]
+    properties: t.Dict[str, openapi.SchemaOrReference], required: t.List[str]
 ) -> t.List[t.Dict[str, str]]:
     props = list()
+    required_set = set(required)
     for prop_title, prop in properties.items():
+        prop_required = prop_title in required_set
         with error_context(f"Could not serialize property {prop_title}"):
-            props.append(get_schema_prop(prop_title, prop))
+            props.append(get_schema_prop(prop_title, prop, prop_required))
     return props
 
 
@@ -138,13 +146,14 @@ def render_inline(schema: openapi.SchemaOrReference):
     if isinstance(schema, openapi.ObjectSchema):
         if schema.additionalProperties is not None:
             return f"HashMap<String,{render_inline(schema.additionalProperties)}>"
-    return ValueError(f"Could not render {schema} as inline type")
+    raise ValueError(f"Could not render {schema} as inline type")
 
 
 def serialize_struct_or_vec(title: str, schema: openapi.Schema):
     assert (
         schema.title is None or title == schema.title
     ), "Title must be equal to schema name"
+    assert isinstance(title, str)
 
     if isinstance(schema, openapi.ArraySchema):
         with error_context("Could not get vec type"):
@@ -160,7 +169,7 @@ def serialize_struct_or_vec(title: str, schema: openapi.Schema):
     if isinstance(schema, openapi.ObjectSchema):
         if schema.properties is not None:
             with error_context("Could not serialize properties"):
-                props = serialzie_props(schema.properties)
+                props = serialzie_props(schema.properties, schema.required)
 
             return render_template(
                 "struct.rs",
@@ -176,14 +185,75 @@ def serialize_struct_or_vec(title: str, schema: openapi.Schema):
                 type=render_inline(schema.additionalProperties),
             )
 
+    if isinstance(schema, openapi.StringSchema):
+        if schema.enum:
+            return render_template("enum.rs", title=title, variants=schema.enum)
+        raise NotImplementedError("String schemas are not implemented")
+
     raise NotImplementedError(f"Unsupported schema type: {schema.type}")
 
 
 ERRORCODE_NAME_MAPPING = {
-    "200": "SUCCESS",
-    "404": "NOT_FOUND",
+    "100": "CONTINUE",
+    "101": "SWITCHING_PROTOCOLS",
+    "102": "PROCESSING",
+    "200": "OK",
+    "201": "CREATED",
+    "202": "ACCEPTED",
+    "203": "NON_AUTHORITATIVE_INFORMATION",
+    "204": "NO_CONTENT",
+    "205": "RESET_CONTENT",
+    "206": "PARTIAL_CONTENT",
+    "207": "MULTI_STATUS",
+    "208": "ALREADY_REPORTED",
+    "226": "IM_USED",
+    "300": "MULTIPLE_CHOICES",
+    "301": "MOVED_PERMANENTLY",
+    "302": "FOUND",
+    "303": "SEE_OTHER",
+    "304": "NOT_MODIFIED",
+    "305": "USE_PROXY",
+    "307": "TEMPORARY_REDIRECT",
+    "308": "PERMANENT_REDIRECT",
     "400": "BAD_REQUEST",
+    "401": "UNAUTHORIZED",
+    "402": "PAYMENT_REQUIRED",
     "403": "FORBIDDEN",
+    "404": "NOT_FOUND",
+    "405": "METHOD_NOT_ALLOWED",
+    "406": "NOT_ACCEPTABLE",
+    "407": "PROXY_AUTHENTICATION_REQUIRED",
+    "408": "REQUEST_TIMEOUT",
+    "409": "CONFLICT",
+    "410": "GONE",
+    "411": "LENGTH_REQUIRED",
+    "412": "PRECONDITION_FAILED",
+    "413": "PAYLOAD_TOO_LARGE",
+    "414": "URI_TOO_LONG",
+    "415": "UNSUPPORTED_MEDIA_TYPE",
+    "416": "RANGE_NOT_SATISFIABLE",
+    "417": "EXPECTATION_FAILED",
+    "418": "IM_A_TEAPOT",
+    "421": "MISDIRECTED_REQUEST",
+    "422": "UNPROCESSABLE_ENTITY",
+    "423": "LOCKED",
+    "424": "FAILED_DEPENDENCY",
+    "426": "UPGRADE_REQUIRED",
+    "428": "PRECONDITION_REQUIRED",
+    "429": "TOO_MANY_REQUESTS",
+    "431": "REQUEST_HEADER_FIELDS_TOO_LARGE",
+    "451": "UNAVAILABLE_FOR_LEGAL_REASONS",
+    "500": "INTERNAL_SERVER_ERROR",
+    "501": "NOT_IMPLEMENTED",
+    "502": "BAD_GATEWAY",
+    "503": "SERVICE_UNAVAILABLE",
+    "504": "GATEWAY_TIMEOUT",
+    "505": "HTTP_VERSION_NOT_SUPPORTED",
+    "506": "VARIANT_ALSO_NEGOTIATES",
+    "507": "INSUFFICIENT_STORAGE",
+    "508": "LOOP_DETECTED",
+    "510": "NOT_EXTENDED",
+    "511": "NETWORK_AUTHENTICATION_REQUIRED",
 }
 
 
@@ -234,25 +304,59 @@ def get_parameter_location(in_str: str) -> ParameterLocation:
         ]
 
 
-def get_parameter_type(loc: ParameterLocation, schema: openapi.SchemaOrReference):
-
+def get_parameter_type(
+    loc: ParameterLocation,
+    schema: openapi.SchemaOrReference,
+    required: bool,
+) -> t.Optional[str]:
     if loc == ParameterLocation.QUERY and isinstance(schema, openapi.SchemaReference):
         return None
-
-    if loc == ParameterLocation.PATH and isinstance(schema, openapi.SCALAR):
-        return f"web::Path<{render_inline(schema)}>"
-
+    if isinstance(schema, openapi.SCALAR):
+        rendered = render_inline(schema)
+        if not required:
+            rendered = f"Option<{rendered}>"
+        return rendered
     raise NotImplementedError(f"{loc} {schema}")
 
 
 def render_response_type(schema: openapi.SchemaOrReference):
     if isinstance(schema, openapi.SCALAR):
         return render_inline(schema)
-    else:
-        return f"web::Json<{render_inline(schema)}>"
+    return f"web::Json<{render_inline(schema)}>"
 
 
-def render_error_and_method(service: openapi.Service):
+def _sanitize_parameter_name(name: str) -> str:
+    return name.lower().replace("-", "_")
+
+
+def _get_new_provider_name(value: t.Any):
+    if isinstance(value, bool):
+        return "static_true" if value else "static_false"
+    raise NotImplementedError(value)
+
+
+def render_as_rust_value(val: t.Any):
+    if isinstance(val, bool):
+        return str(val).lower()
+    return repr(val)
+
+
+def get_provider_name(providers: t.Dict[str, t.Any], value: t.Any, value_type: str):
+    if value in providers:
+        return providers[value]["name"]
+
+    name = _get_new_provider_name(value)
+
+    providers[value] = {
+        "name": name,
+        "value": render_as_rust_value(value),
+        "type": TYPE_MAPPING[value_type],
+    }
+
+    return name
+
+
+def render_error_and_method(providers: t.Dict[str, t.Any], service: openapi.Service):
 
     success_response = service.responses["200"].content["application/json"].schema_
 
@@ -260,23 +364,45 @@ def render_error_and_method(service: openapi.Service):
 
     error_type, error = render_error(service)
 
+    path_parameters = list()
+    query_parameters = list()
     parameters = list()
 
     for parameter in service.parameters:
-        parameter_type = get_parameter_type(
-            get_parameter_location(parameter.in_), parameter.schema_
-        )
+
+        location = get_parameter_location(parameter.in_)
+
+        required = parameter.required
+        default = None
+
+        if isinstance(parameter.schema_, openapi.SCALAR):
+            if parameter.schema_.default is not None:
+                required = True
+                default = get_provider_name(
+                    providers, parameter.schema_.default, parameter.schema_.type
+                )
+
+        parameter_type = get_parameter_type(location, parameter.schema_, required)
 
         if parameter_type is None:
             parameters = [{"name": "request", "type": "HttpRequest"}]
             break
 
-        parameters.append(
-            {
-                "name": parameter.name,
-                "type": parameter_type,
-            }
-        )
+        sanitized = _sanitize_parameter_name(parameter.name)
+
+        param = {
+            "name": sanitized,
+            "type": parameter_type,
+            "rename": parameter.name if sanitized != parameter.name else None,
+            "default": default,
+        }
+
+        if location == ParameterLocation.PATH:
+            path_parameters.append(param)
+        elif location == ParameterLocation.QUERY:
+            query_parameters.append(param)
+        else:
+            raise NotImplementedError("Unknown path paramaeter location")
 
     method = {
         "doc": service.summary,
@@ -286,6 +412,8 @@ def render_error_and_method(service: openapi.Service):
         "method": service.method,
         "path": service.path,
         "parameters": parameters,
+        "query_parameters": query_parameters,
+        "path_parameters": path_parameters,
     }
 
     return error, method
@@ -294,26 +422,36 @@ def render_error_and_method(service: openapi.Service):
 def _main(spec_file: typer.FileText):
     spec_obj = yaml.safe_load(spec_file.read())
 
-    with error_context(f"Could not extract schemas"):
+    with error_context("Could not extract schemas"):
         schemas = openapi.extract_schemas(spec_obj)
 
-    with error_context(f"Could not extract services"):
+    with error_context("Could not extract services"):
         services = openapi.extract_services(spec_obj)
 
     models = list()
     for name, schema in schemas.schemas.items():
-        with error_context(f"Error processing schema {name}"):
+        with error_context(f"Error reading /components/schemas/{name}"):
             models.append(serialize_struct_or_vec(name, schema))
 
     errors = list()
     methods = list()
+
+    providers = dict()
     for error in services:
-        error, method = render_error_and_method(error)
+        error, method = render_error_and_method(providers, error)
         if error is not None:
             errors.append(error)
         methods.append(method)
 
-    print(render_template("api.rs", models=models, errors=errors, methods=methods))
+    print(
+        render_template(
+            "api.rs",
+            models=models,
+            errors=errors,
+            methods=methods,
+            providers=list(providers.values()),
+        )
+    )
 
 
 def main():

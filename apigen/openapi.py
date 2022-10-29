@@ -1,3 +1,7 @@
+"""
+Openapi Spec
+"""
+
 from __future__ import annotations
 
 import typing as t
@@ -14,6 +18,7 @@ class NumberSchema(BaseModel):
     title: t.Optional[str]
     description: t.Optional[str]
     example: t.Optional[float]
+    default: t.Optional[float]
 
 
 class IntegerSchema(BaseModel):
@@ -21,6 +26,7 @@ class IntegerSchema(BaseModel):
     title: t.Optional[str]
     description: t.Optional[str]
     example: t.Optional[int]
+    default: t.Optional[int]
 
 
 class StringSchema(BaseModel):
@@ -29,6 +35,7 @@ class StringSchema(BaseModel):
     description: t.Optional[str]
     example: t.Optional[str]
     enum: t.Optional[t.List[str]]
+    default: t.Optional[str]
 
 
 class BooleanSchema(BaseModel):
@@ -36,6 +43,7 @@ class BooleanSchema(BaseModel):
     title: t.Optional[str]
     description: t.Optional[str]
     example: t.Optional[bool]
+    default: t.Optional[bool]
 
 
 SCALAR = (NumberSchema, IntegerSchema, StringSchema, BooleanSchema)
@@ -43,6 +51,7 @@ SCALAR = (NumberSchema, IntegerSchema, StringSchema, BooleanSchema)
 
 class ObjectSchema(BaseModel):
     type: t.Literal["object"] = "object"
+    required: t.List[str]
     title: t.Optional[str]
     description: t.Optional[str]
     properties: t.Optional[t.Dict[str, SchemaOrReference]]
