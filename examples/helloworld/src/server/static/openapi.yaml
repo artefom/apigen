@@ -1,0 +1,30 @@
+openapi: "3.0.3"
+info:
+  version: "1.0"
+  title: "Hello World API"
+paths:
+  /hello/{user}:
+    get:
+      description: Returns a greeting to the user!
+      parameters:
+        - name: user
+          in: path
+          required: true
+          description: The name of the user to greet.
+          schema:
+            type: string
+      responses:
+        200:
+          description: Returns the greeting.
+          content:
+            application/json:
+              schema:
+                type: string
+        400:
+          description: Invalid characters in "user" were provided.
+          content:
+            application/json:
+              schema:
+                title: Details
+                type: string
+                enum: ['Invalid characters']

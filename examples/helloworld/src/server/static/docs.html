@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4/swagger-ui.css">
+    <link rel="shortcut icon" href="https://fastapi.tiangolo.com/img/favicon.png">
+    <title>helloworld - Swagger UI</title>
+
+    <style>
+        .swagger-ui .info .title small.version-stamp {
+            background-color: #BC2A0C;
+        }
+
+        .swagger-ui .info a {
+            color: #D89000;
+        }
+
+        /* ----------- GET ----------- */
+
+        .swagger-ui .opblock.opblock-get .opblock-summary-method {
+            background: #9A542E;
+        }
+
+        .swagger-ui .opblock.opblock-get {
+            background: #9A542E1A;
+            border-color: #9A542E;
+        }
+
+        .swagger-ui .opblock.opblock-get .opblock-summary {
+            border-color: #9A542E;
+        }
+
+        .swagger-ui .opblock.opblock-get .tab-header .tab-item.active h4 span:after {
+            background: #9A542E;
+        }
+
+        /* ----------- POST ----------- */
+
+        .swagger-ui .opblock.opblock-post .opblock-summary-method {
+            background: #D89000;
+        }
+
+        .swagger-ui .opblock.opblock-post {
+            background: #D890001A;
+            border-color: #D89000;
+        }
+
+        .swagger-ui .opblock.opblock-post .opblock-summary {
+            border-color: #D89000;
+        }
+
+        .swagger-ui .opblock.opblock-post .tab-header .tab-item.active h4 span:after {
+            background: #D89000;
+        }
+
+        /* ----------- DELETE ----------- */
+
+        .swagger-ui .opblock.opblock-delete .opblock-summary-method {
+            background: #BC2A0C;
+        }
+
+        .swagger-ui .opblock.opblock-delete {
+            background: #BC2A0C1A;
+            border-color: #BC2A0C;
+        }
+
+        .swagger-ui .opblock.opblock-delete .opblock-summary {
+            border-color: #BC2A0C;
+        }
+
+        .swagger-ui .opblock.opblock-delete .tab-header .tab-item.active h4 span:after {
+            background: #BC2A0C;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="swagger-ui">
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4/swagger-ui-bundle.js"></script>
+    <!-- `SwaggerUIBundle` is now available on the page -->
+    <script>
+        const ui = SwaggerUIBundle({
+            url: './openapi.yaml',
+            "dom_id": "#swagger-ui",
+            "layout": "BaseLayout",
+            "deepLinking": true,
+            "showExtensions": true,
+            "showCommonExtensions": true,
+            oauth2RedirectUrl: window.location.origin + '/docs/oauth2-redirect',
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIBundle.SwaggerUIStandalonePreset
+            ],
+        })
+    </script>
+</body>
+
+</html>

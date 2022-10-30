@@ -97,6 +97,10 @@ class Components(BaseModel):
 
 
 def extract_schemas(spec: t.Dict[t.Any, t.Any]):
+
+    if "components" not in spec:
+        return Components(schemas=dict())
+
     components = Components.parse_obj(spec["components"])
 
     return components
@@ -129,10 +133,26 @@ class Service(BaseModel):
 
 
 def _get_parameter_dict(spec: t.Dict[t.Any, t.Any]):
+
+    if "components" not in spec:
+        return dict()
+
     result = dict()
     for name, parameter in spec["components"]["parameters"].items():
         result[f"#/components/parameters/{name}"] = parameter
     return result
+
+
+def _path_to_slug(path: str):
+    return (
+        path.strip("/")
+        .replace("-", "_")
+        .replace("/", "_")
+        .replace("{", "")
+        .replace("}", "")
+        .lower()
+        .replace("__", "_")
+    )
 
 
 def extract_services(spec: t.Dict[t.Any, t.Any]) -> t.List[Service]:
@@ -153,8 +173,8 @@ def extract_services(spec: t.Dict[t.Any, t.Any]) -> t.List[Service]:
                 Service(
                     path=path,
                     method=method,
-                    summary=service["summary"],
-                    operation_id=service["operationId"],
+                    summary=service.get("summary", ""),
+                    operation_id=service.get("operationId", _path_to_slug(path)),
                     responses={
                         k: Response.parse_obj(v)
                         for k, v in service["responses"].items()

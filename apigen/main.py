@@ -10,6 +10,8 @@ from jinja2 import Environment, FunctionLoader
 import apigen.openapi as openapi
 import apigen.templates
 
+app = typer.Typer()
+
 JinjaEnv = Environment(
     loader=FunctionLoader(
         lambda tempalte: files(apigen.templates).joinpath(tempalte).read_text()
@@ -423,7 +425,11 @@ def render_error_and_method(providers: t.Dict[str, t.Any], service: openapi.Serv
     return error, method
 
 
-def _main(spec_file: typer.FileText):
+@app.command()
+def rs(spec_file: typer.FileText):
+    """
+    Prints rust module from given spec
+    """
     spec_obj = yaml.safe_load(spec_file.read())
 
     with error_context("Could not extract schemas"):
@@ -458,5 +464,13 @@ def _main(spec_file: typer.FileText):
     )
 
 
+@app.command()
+def html(title: str):
+    """
+    Prints html template
+    """
+    print(render_template("docs.html", title=title))
+
+
 def main():
-    typer.run(_main)
+    app()
