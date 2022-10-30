@@ -331,7 +331,11 @@ def _sanitize_parameter_name(name: str) -> str:
 
 def _get_new_provider_name(value: t.Any):
     if isinstance(value, bool):
-        return "static_true" if value else "static_false"
+        return f"static_bool_{value}".lower()
+    if isinstance(value, int):
+        return f"static_int_{value}"
+    if isinstance(value, float):
+        return f"static_float_{value}".replace(".", "_")
     raise NotImplementedError(value)
 
 

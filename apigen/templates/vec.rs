@@ -1,1 +1,1 @@
-type {{title}} = Vec<{{type}}>;
+pub type {{title}} = Vec<{{type}}>;

@@ -127,7 +127,7 @@ pub struct {{method.operation_id | to_camel_case}}Path {
 #[derive(Deserialize)]
 pub struct {{method.operation_id | to_camel_case}}Query {
     {% for parameter in method.query_parameters %}
-    {% if parameter.rename or paramter.default %}
+    {% if parameter.rename or parameter.default %}
     #[serde(
         {% if parameter.rename %}
         rename = "{{parameter.rename}}",
@@ -178,6 +178,9 @@ where
         data: web::Data<S>,
         {% if method.path_parameters %}
         path: web::Path<{{method.operation_id | to_camel_case}}Path>,
+        {% endif %}
+        {% if method.query_parameters %}
+        query: web::Query<{{method.operation_id | to_camel_case}}Query>,
         {% endif %}
         {% for parameter in method.parameters %}
         {{parameter.name}}: {{parameter.type}},
